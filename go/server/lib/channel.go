@@ -117,10 +117,9 @@ func (c *Channel) GetAllMessages(userId string) []*Message {
 }
 
 func (c *Channel) getChannelUser(userId string) *channelUser {
-	// FIXME I think range copies c.users and pointer is being returned of copied user
-	for _, cUser := range c.users {
+	for i, cUser := range c.users {
 		if cUser.user.Id == userId {
-			return &cUser
+			return &c.users[i]
 		}
 	}
 	return nil
