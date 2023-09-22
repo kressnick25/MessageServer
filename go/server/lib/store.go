@@ -103,7 +103,7 @@ func (s *ChannelStore) ReadNewMessages(channelId int, user *User) ([]*Message, e
 		return nil, fmt.Errorf("Channel with id [%d] does not exist", channelId)
 	}
 
-	return c.GetNewMessages(user.Id), nil
+	return c.GetNewMessages(user.Id)
 }
 
 func (s *ChannelStore) getChannel(channelId int) *Channel {

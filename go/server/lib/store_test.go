@@ -25,7 +25,7 @@ func TestSendMessageNoChannel(t *testing.T) {
 	}
 }
 
-func TestNoMessagesFromUnsubscribedChannel(t *testing.T) {
+func TestUnsubscribedChannelReturnsError(t *testing.T) {
 	store := NewStore()
 	a := User{Id: "a"}
 	store.AddNewChannel(1)
@@ -33,10 +33,9 @@ func TestNoMessagesFromUnsubscribedChannel(t *testing.T) {
 	err := store.SendMessage(1, NewMessage(a.Id, "Hello 1"))
 	check(err, t)
 
-	msgs, err := store.ReadNewMessages(1, &a)
-	check(err, t)
-	if len(msgs) != 0 {
-		t.Errorf("expected 0 messages, actual %d", len(msgs))
+	_, err = store.ReadNewMessages(1, &a)
+	if err == nil {
+		t.Errorf("Expected err on reading from unsubbed channel")
 	}
 }
 
@@ -80,6 +79,8 @@ func TestSingleUserHappyPath(t *testing.T) {
 	if len(msgs) != 0 {
 		t.Errorf("expected 0 messages, actual %d", len(msgs))
 	}
+
+
 
 
 }

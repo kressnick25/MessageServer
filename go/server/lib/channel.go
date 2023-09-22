@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"fmt"
 	"hash/maphash"
 	"sync"
 	"time"
@@ -86,8 +87,8 @@ func (c *Channel) Send(message *Message) {
 
 // Get all unread Messages on the channel for a User
 // returns empty slice if there are no new unread Messages
-// returns nil if the User is not subscribed to the channel
-func (c *Channel) GetNewMessages(userId string) []*Message {
+// returns error if the User is not subscribed to the channel
+func (c *Channel) GetNewMessages(userId string) ([]*Message, error) {
 
 	// TODO instead of storing the int, which can cause duplicate messages to be sent without read locking,
 	// store the hash of the last message received, then send all since that message.
@@ -100,12 +101,12 @@ func (c *Channel) GetNewMessages(userId string) []*Message {
 
 	cUser := c.getChannelUser(userId)
 	if cUser == nil {
-		return nil
+		return nil, fmt.Errorf("User %s not subsribed to channel %d", userId, c.Id)
 	}
 	lastIdx := len(c.messages) - 1
 	newMessages := c.messages[cUser.lastReadIndex + 1:]
 	cUser.lastReadIndex = lastIdx
-	return newMessages
+	return newMessages, nil
 }
 
 func (c *Channel) GetAllMessages(userId string) []*Message {
