@@ -57,7 +57,7 @@ func (c *Channel) Subscribe(user *User) {
 		return
 	}
 
-	channelUser := channelUser{user, 0}
+	channelUser := channelUser{user, -1}
 	c.users = append(c.users, channelUser)
 }
 
@@ -93,10 +93,14 @@ func (c *Channel) GetNewMessages(userId string) []*Message {
 		return nil
 	}
 	lastIdx := len(c.messages) - 1
-	if cUser.lastReadIndex == lastIdx {
-		return []*Message{}
+	var newMessages []*Message
+	if lastIdx == 0 {
+		newMessages = c.messages[0:]
+	} else if cUser.lastReadIndex >= lastIdx {
+		newMessages = []*Message{}
+	} else {
+		newMessages = c.messages[cUser.lastReadIndex:lastIdx]
 	}
-	newMessages := c.messages[cUser.lastReadIndex:lastIdx]
 	cUser.lastReadIndex = lastIdx
 	return newMessages
 }
@@ -113,6 +117,7 @@ func (c *Channel) GetAllMessages(userId string) []*Message {
 }
 
 func (c *Channel) getChannelUser(userId string) *channelUser {
+	// FIXME I think range copies c.users and pointer is being returned of copied user
 	for _, cUser := range c.users {
 		if cUser.user.Id == userId {
 			return &cUser

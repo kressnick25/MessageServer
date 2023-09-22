@@ -10,32 +10,59 @@ type ChannelStore struct {
 	channels map[int]*Channel
 }
 
-func (s *ChannelStore) AddNewChannel(channelId int) (*Channel, error) {
+func NewStore() *ChannelStore {
+	return &ChannelStore{sync.RWMutex{}, map[int]*Channel{}}
+}
+
+func (s *ChannelStore) AddNewChannel(channelId int) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if s.getChannel(channelId) == nil {
-		return nil, fmt.Errorf("Channel with id [%d] already exists", channelId)
+	if s.getChannel(channelId) != nil {
+		return fmt.Errorf("Channel with id [%d] already exists", channelId)
 	}
 
 	newChannel := NewChannel(channelId)
 	s.channels[channelId] = newChannel
 
-	return newChannel, nil
+	return nil
 }
 
-func (s *ChannelStore) Subscribe(channelId int, user *User) {
+func (s *ChannelStore) DeleteChannel(channelId int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.getChannel(channelId) == nil {
+		return
+	}
+
+	s.channels[channelId] = nil	
+}
+
+
+func (s *ChannelStore) Subscribe(channelId int, user *User) error {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	s.getChannel(channelId).Subscribe(user)
+	c := s.getChannel(channelId)
+	if c == nil {
+		return fmt.Errorf("Channel with id [%d] does not exist", channelId)
+	}
+
+	c.Subscribe(user)
+	return nil
 }
 
 func (s *ChannelStore) Unsubscribe(channelId int, user *User) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	s.getChannel(channelId).Unsubscribe(user.Id)
+	c := s.getChannel(channelId)
+	if c == nil {
+		return
+	}
+	
+	c.Unsubscribe(user.Id)
 
 }
 
@@ -54,21 +81,35 @@ func (s *ChannelStore) UnsubscribeAll(user *User) {
 
 }
 
-func (s *ChannelStore) SendMessage(channelId int, user *User, message *Message) {
+func (s *ChannelStore) SendMessage(channelId int, message *Message) error {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	s.getChannel(channelId).Send(message)
+	c := s.getChannel(channelId)
+	if c == nil {
+		return fmt.Errorf("Channel with id [%d] does not exist", channelId)
+	}
+
+	c.Send(message)
+	return nil
 }
 
-func (s *ChannelStore) ReadNewMessages(channelId int, user *User) {
+func (s *ChannelStore) ReadNewMessages(channelId int, user *User) ([]*Message, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	s.getChannel(channelId).GetNewMessages(user.Id)
+	c := s.getChannel(channelId)
+	if c == nil {
+		return nil, fmt.Errorf("Channel with id [%d] does not exist", channelId)
+	}
+
+	return c.GetNewMessages(user.Id), nil
 }
 
 func (s *ChannelStore) getChannel(channelId int) *Channel {
+	if s.channels[channelId] == nil {
+		return nil
+	}
 	return s.channels[channelId]
 }
 
