@@ -13,6 +13,7 @@ type Channel struct {
 	users    []channelUser
 	messages []*Message
 	subMu    sync.Mutex
+	msgMu	 sync.RWMutex
 }
 
 type Message struct {
@@ -45,11 +46,13 @@ type channelUser struct {
 }
 
 func NewChannel(id int) *Channel {
-	return &Channel{id, []channelUser{}, []*Message{}, sync.Mutex{}}
+	return &Channel{id, []channelUser{}, []*Message{}, sync.Mutex{}, sync.RWMutex{}}
 }
 
 // Subscribe a User to the Channel, if not already subscribed
 func (c *Channel) Subscribe(user *User) {
+	// lock here to prevent double insert, or overwriting previous insert
+	// maybe change users to a Set?
 	c.subMu.Lock()
 	defer c.subMu.Unlock()
 
@@ -75,6 +78,9 @@ func (c *Channel) Unsubscribe(userId string) {
 
 // Send a Message to the Channel
 func (c *Channel) Send(message *Message) {
+	c.msgMu.Lock()
+	defer c.msgMu.Unlock()
+
 	c.messages = append(c.messages, message)
 }
 
@@ -83,29 +89,29 @@ func (c *Channel) Send(message *Message) {
 // returns nil if the User is not subscribed to the channel
 func (c *Channel) GetNewMessages(userId string) []*Message {
 
-	// TODO instead of storing the int, which can cause duplicate messages to be sent,
+	// TODO instead of storing the int, which can cause duplicate messages to be sent without read locking,
 	// store the hash of the last message received, then send all since that message.
+	c.msgMu.RLock()
+	defer c.msgMu.RUnlock()
+
 	// hmm although that would then incur a scan on every message request.
 	// maybe not an issue once move to streaming? To investigate
+
 
 	cUser := c.getChannelUser(userId)
 	if cUser == nil {
 		return nil
 	}
 	lastIdx := len(c.messages) - 1
-	var newMessages []*Message
-	if lastIdx == 0 {
-		newMessages = c.messages[0:]
-	} else if cUser.lastReadIndex >= lastIdx {
-		newMessages = []*Message{}
-	} else {
-		newMessages = c.messages[cUser.lastReadIndex:lastIdx]
-	}
+	newMessages := c.messages[cUser.lastReadIndex + 1:]
 	cUser.lastReadIndex = lastIdx
 	return newMessages
 }
 
 func (c *Channel) GetAllMessages(userId string) []*Message {
+	c.msgMu.RLock()
+	defer c.msgMu.RUnlock()
+
 	cUser := c.getChannelUser(userId)
 	if cUser == nil {
 		return nil

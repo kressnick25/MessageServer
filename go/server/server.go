@@ -47,6 +47,11 @@ func main() {
 	assert(err == nil, err)
 
 	printMsgs(msgs)
+
+	msgs, err = store.ReadNewMessages(1, &b)
+	assert(err == nil, err)
+	// should be empty
+	printMsgs(msgs)
 }
 
 func assert(test bool, err error) {
