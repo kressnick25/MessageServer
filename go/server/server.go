@@ -40,7 +40,7 @@ func main() {
 
 	err = store.SendMessage(1, lib.NewMessage(a.Id, "Message 2"))
 	assert(err == nil, err)
-	err = store.SendMessage(1, lib.NewMessage(a.Id, "Message 3"))
+	err = store.SendMessage(1, lib.NewMessage(b.Id, "Message 3"))
 	assert(err == nil, err)
 
 	msgs, err = store.ReadNewMessages(1, &b)
